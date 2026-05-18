@@ -687,9 +687,18 @@ function renderArticle(parseData) {
 
       // Excluir links de archivos, especiales, etc.
       if (!wikiArticle.startsWith('File:') &&
+          !wikiArticle.startsWith('Archivo:') &&
           !wikiArticle.startsWith('Special:') &&
+          !wikiArticle.startsWith('Especial:') &&
           !wikiArticle.startsWith('Help:') &&
-          !wikiArticle.startsWith('Wikipedia:')) {
+          !wikiArticle.startsWith('Ayuda:') &&
+          !wikiArticle.startsWith('Wikipedia:') &&
+          !wikiArticle.startsWith('Categoría:') &&
+          !wikiArticle.startsWith('Portal:') &&
+          !wikiArticle.startsWith('Plantilla:') &&
+          !wikiArticle.startsWith('Usuario:') &&
+          !wikiArticle.startsWith('Usuario_discusión:') &&
+          !wikiArticle.startsWith('Usuario_discusión:')) {
 
         // Redirigir al mismo dominio con el nuevo artículo
         link.href = `?article=${wikiArticle}`;

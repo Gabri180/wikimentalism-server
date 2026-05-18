@@ -2,67 +2,29 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <!--
-    ╔══════════════════════════════════════════════════════════════╗
-    ║  WIKIMENTALISM - PARTE 1: CLON VISUAL WIKIPEDIA MÓVIL       ║
-    ║  Autor: Sistema PoC Mentalismo Digital                      ║
-    ║  Descripción: Réplica móvil de Wikipedia con tracking       ║
-    ║               invisible y comunicación WebSocket en tiempo  ║
-    ║               real hacia el servidor del mago.              ║
-    ╚══════════════════════════════════════════════════════════════╝
-
-    DESPLIEGUE:
-    - Sube este archivo a cualquier hosting estático (Netlify,
-      Vercel, GitHub Pages, etc.)
-    - Acceso: https://tudominio.com/?article=JavaScript
-    - El parámetro ?article= define qué artículo de Wikipedia
-      se carga desde la API real.
-
-    USO ÉTICO: Este sistema es para actos de magia/mentalismo
-    con participación voluntaria del espectador.
-  -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
   <meta name="theme-color" content="#eaecf0" />
-
-  <!-- Favicon idéntico al de Wikipedia -->
   <link rel="shortcut icon" href="https://en.wikipedia.org/static/favicon/wikipedia.ico" />
-
   <title>Wikipedia</title>
 
-  <!-- ═══════════════════════════════════════════════════════════
-       CSS: RÉPLICA EXACTA DE LA INTERFAZ MÓVIL DE WIKIPEDIA
-       Basado en el skin "Minerva Neue" de MediaWiki
-       ═══════════════════════════════════════════════════════════ -->
   <style>
-    /* ── Reset & Variables de Wikipedia ─────────────────────── */
-    *, *::before, *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --color-base:               #202122;
-      --color-subtle:             #54595d;
-      --color-link:               #3366cc;
-      --color-link-visited:       #6b4516;
-      --color-progressive:        #3366cc;
-      --color-surface-0:          #fff;
-      --color-surface-1:          #f8f9fa;
-      --color-surface-2:          #eaecf0;
-      --color-border:             #a2a9b1;
-      --font-family-sans:         -apple-system, BlinkMacSystemFont, 'Linux Libertine',
-                                  Georgia, Times, 'Times New Roman', serif;
-      --font-family-heading:      'Linux Libertine', Georgia, Times, serif;
-      --font-size-base:           16px;
-      --header-height:            54px;
-      --max-width:                1000px;
+      --color-base:          #202122;
+      --color-subtle:        #54595d;
+      --color-link:          #3366cc;
+      --color-link-visited:  #6b4516;
+      --color-surface-0:     #fff;
+      --color-surface-1:     #f8f9fa;
+      --color-surface-2:     #eaecf0;
+      --color-border:        #a2a9b1;
+      --font-family-heading: 'Linux Libertine', Georgia, Times, serif;
+      --header-height:       54px;
+      --max-width:           1000px;
     }
 
-    html {
-      font-size: var(--font-size-base);
-      -webkit-text-size-adjust: 100%;
-    }
+    html { font-size: 16px; -webkit-text-size-adjust: 100%; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
@@ -74,15 +36,12 @@
       overflow-x: hidden;
     }
 
-    /* ── HEADER: Barra superior gris con lupa y logo ──────────── */
-    #mw-mf-viewport header,
+    /* HEADER */
     .header-container {
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
+      top: 0; left: 0; right: 0;
       z-index: 100;
-      background: var(--color-surface-2);  /* gris Wikipedia */
+      background: var(--color-surface-2);
       border-bottom: 1px solid var(--color-border);
       height: var(--header-height);
       display: flex;
@@ -99,35 +58,19 @@
       gap: 8px;
     }
 
-    /* Botón hamburguesa */
     .menu-btn {
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: 8px;
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-      flex-shrink: 0;
+      background: none; border: none; cursor: pointer;
+      padding: 8px; display: flex; flex-direction: column;
+      gap: 5px; flex-shrink: 0;
     }
-
     .menu-btn span {
-      display: block;
-      width: 20px;
-      height: 2px;
-      background: #54595d;
-      border-radius: 1px;
+      display: block; width: 20px; height: 2px;
+      background: #54595d; border-radius: 1px;
     }
 
-    /* Logo de Wikipedia */
-    .wiki-logo {
-      flex-shrink: 0;
-      width: 35px;
-      height: 35px;
-      margin-left: 4px;
-    }
+    .wiki-logo { flex-shrink: 0; width: 35px; height: 35px; margin-left: 4px; }
 
-    /* Barra de búsqueda central */
+    /* BÚSQUEDA FUNCIONAL */
     .search-bar {
       flex: 1;
       display: flex;
@@ -137,42 +80,69 @@
       border-radius: 2px;
       padding: 6px 10px;
       min-width: 0;
+      position: relative;
     }
 
     .search-bar svg {
-      width: 16px;
-      height: 16px;
+      width: 16px; height: 16px;
       fill: var(--color-subtle);
       flex-shrink: 0;
       margin-right: 8px;
     }
 
-    .search-bar span {
+    #search-input {
+      border: none; outline: none;
+      width: 100%;
       font-size: 0.875rem;
-      color: var(--color-subtle);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      color: var(--color-base);
+      background: transparent;
+      font-family: inherit;
+    }
+    #search-input::placeholder { color: var(--color-subtle); }
+
+    #search-clear {
+      display: none;
+      background: none; border: none; cursor: pointer;
+      padding: 2px; color: var(--color-subtle);
+      font-size: 16px; line-height: 1; flex-shrink: 0;
     }
 
-    /* Botón de usuario */
-    .user-btn {
-      background: none;
-      border: none;
+    /* Dropdown sugerencias */
+    #search-suggestions {
+      display: none;
+      position: fixed;
+      top: var(--header-height);
+      left: 0; right: 0;
+      background: white;
+      border-bottom: 1px solid var(--color-border);
+      z-index: 999;
+      max-height: 60vh;
+      overflow-y: auto;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .suggestion-item {
+      padding: 10px 16px;
       cursor: pointer;
-      padding: 8px;
-      flex-shrink: 0;
+      font-size: 0.875rem;
+      color: var(--color-base);
+      border-bottom: 1px solid var(--color-surface-2);
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
     }
+    .suggestion-item:last-child  { border-bottom: none; }
+    .suggestion-item:hover,
+    .suggestion-item.active      { background: #eaf3fe; }
+    .suggestion-item svg         { margin-top: 2px; flex-shrink: 0; fill: var(--color-subtle); }
+    .suggestion-title            { font-weight: 500; color: var(--color-link); line-height: 1.4; }
+    .suggestion-desc             { font-size: 0.75rem; color: var(--color-subtle); margin-top: 1px; line-height: 1.3; }
 
-    .user-btn svg {
-      width: 20px;
-      height: 20px;
-      fill: var(--color-subtle);
-    }
+    .user-btn { background: none; border: none; cursor: pointer; padding: 8px; flex-shrink: 0; }
+    .user-btn svg { width: 20px; height: 20px; fill: var(--color-subtle); }
 
-    /* ── CONTENIDO PRINCIPAL ──────────────────────────────────── */
-    #content,
-    .mw-body {
+    /* CONTENIDO */
+    #content, .mw-body {
       margin-top: var(--header-height);
       padding: 16px 16px 40px;
       max-width: var(--max-width);
@@ -180,20 +150,7 @@
       margin-right: auto;
     }
 
-    /* Indicador de idioma / namespace */
-    .pre-content {
-      margin-bottom: 12px;
-    }
-
-    .mw-indicators {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
-
-    /* Título del artículo */
-    h1.firstHeading,
-    #firstHeading {
+    h1.firstHeading, #firstHeading {
       font-family: var(--font-family-heading);
       font-size: 1.75rem;
       font-weight: normal;
@@ -204,225 +161,86 @@
       margin-bottom: 16px;
     }
 
-    /* ── ARTICLE CONTENT: Estilos internos de Wikipedia ────────── */
-    .mw-parser-output {
-      font-size: 0.9rem;
-      line-height: 1.65;
-    }
-
-    .mw-parser-output p {
-      margin-bottom: 0.8em;
-    }
-
-    /* Secciones y encabezados */
-    .mw-parser-output h2 {
-      font-family: var(--font-family-heading);
-      font-size: 1.4rem;
-      font-weight: normal;
-      border-bottom: 1px solid var(--color-surface-2);
-      padding-bottom: 3px;
-      margin: 20px 0 10px;
-    }
-
-    .mw-parser-output h3 {
-      font-size: 1.1rem;
-      font-weight: bold;
-      margin: 16px 0 8px;
-    }
-
-    .mw-parser-output h4 {
-      font-size: 0.95rem;
-      font-weight: bold;
-      margin: 14px 0 6px;
-    }
-
-    /* ── ENLACES: Azul Wikipedia clásico ────────────────────────── */
-    .mw-parser-output a,
-    #content a {
-      color: var(--color-link);
-      text-decoration: none;
-    }
-
-    .mw-parser-output a:visited {
-      color: var(--color-link-visited);
-    }
-
-    .mw-parser-output a:hover {
-      text-decoration: underline;
-    }
-
-    /* ── IMÁGENES y Thumbnails ───────────────────────────────────── */
-    .mw-parser-output img {
-      max-width: 100%;
-      height: auto;
-    }
+    .mw-parser-output               { font-size: 0.9rem; line-height: 1.65; }
+    .mw-parser-output p             { margin-bottom: 0.8em; }
+    .mw-parser-output h2            { font-family: var(--font-family-heading); font-size: 1.4rem; font-weight: normal; border-bottom: 1px solid var(--color-surface-2); padding-bottom: 3px; margin: 20px 0 10px; }
+    .mw-parser-output h3            { font-size: 1.1rem; font-weight: bold; margin: 16px 0 8px; }
+    .mw-parser-output h4            { font-size: 0.95rem; font-weight: bold; margin: 14px 0 6px; }
+    .mw-parser-output a, #content a { color: var(--color-link); text-decoration: none; }
+    .mw-parser-output a:visited     { color: var(--color-link-visited); }
+    .mw-parser-output a:hover       { text-decoration: underline; }
+    .mw-parser-output img           { max-width: 100%; height: auto; }
 
     .mw-parser-output .thumb {
-      margin: 0 0 12px 16px;
-      float: right;
-      clear: right;
-      background: var(--color-surface-1);
-      border: 1px solid var(--color-border);
-      padding: 4px;
-      max-width: 45%;
+      margin: 0 0 12px 16px; float: right; clear: right;
+      background: var(--color-surface-1); border: 1px solid var(--color-border);
+      padding: 4px; max-width: 45%;
     }
+    .mw-parser-output .thumbinner  { font-size: 0.75rem; line-height: 1.4; }
+    .mw-parser-output .thumbcaption { padding: 3px 4px 0; color: var(--color-subtle); }
 
-    .mw-parser-output .thumbinner {
-      font-size: 0.75rem;
-      line-height: 1.4;
-    }
-
-    .mw-parser-output .thumbcaption {
-      padding: 3px 4px 0;
-      color: var(--color-subtle);
-    }
-
-    /* ── INFOBOX (tabla lateral) ─────────────────────────────────── */
     .mw-parser-output .infobox,
     .mw-parser-output table.infobox {
-      float: right;
-      clear: right;
-      margin: 0 0 16px 16px;
-      padding: 6px;
-      border: 1px solid var(--color-border);
-      background: var(--color-surface-1);
-      font-size: 0.8rem;
-      line-height: 1.5;
-      max-width: 55%;
-      width: auto;
+      float: right; clear: right; margin: 0 0 16px 16px; padding: 6px;
+      border: 1px solid var(--color-border); background: var(--color-surface-1);
+      font-size: 0.8rem; line-height: 1.5; max-width: 55%;
     }
+    .mw-parser-output .infobox th  { background: var(--color-surface-2); text-align: center; padding: 4px; }
+    .mw-parser-output .infobox td  { padding: 3px 4px; vertical-align: top; }
 
-    .mw-parser-output .infobox th {
-      background: var(--color-surface-2);
-      text-align: center;
-      padding: 4px;
+    .mw-parser-output .toc, #toc {
+      background: var(--color-surface-1); border: 1px solid var(--color-border);
+      padding: 12px 16px; margin: 0 0 20px; font-size: 0.85rem;
+      display: inline-block; min-width: 200px;
     }
-
-    .mw-parser-output .infobox td {
-      padding: 3px 4px;
-      vertical-align: top;
-    }
-
-    /* ── TABLA DE CONTENIDOS ─────────────────────────────────────── */
-    .mw-parser-output .toc,
-    #toc {
-      background: var(--color-surface-1);
-      border: 1px solid var(--color-border);
-      padding: 12px 16px;
-      margin: 0 0 20px;
-      font-size: 0.85rem;
-      display: inline-block;
-      min-width: 200px;
-    }
-
-    .mw-parser-output .toctitle {
-      font-weight: bold;
-      margin-bottom: 6px;
-    }
-
-    .mw-parser-output .toc ul {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-    }
-
-    .mw-parser-output .toc li {
-      padding: 2px 0;
-    }
-
-    /* ── REFERENCIAS ─────────────────────────────────────────────── */
+    .mw-parser-output .toctitle    { font-weight: bold; margin-bottom: 6px; }
+    .mw-parser-output .toc ul      { list-style: none; margin: 0; padding: 0; }
+    .mw-parser-output .toc li      { padding: 2px 0; }
     .mw-parser-output .reflist,
-    .mw-parser-output ol.references {
-      font-size: 0.8rem;
-      column-count: 1;
-    }
+    .mw-parser-output ol.references { font-size: 0.8rem; }
+    .mw-parser-output sup           { font-size: 0.7rem; }
+    .mw-parser-output sup a         { color: var(--color-link); }
 
-    .mw-parser-output sup {
-      font-size: 0.7rem;
-    }
-
-    .mw-parser-output sup a {
-      color: var(--color-link);
-    }
-
-    /* ── CATEGORÍAS ──────────────────────────────────────────────── */
     #catlinks {
       border-top: 1px solid var(--color-border);
-      margin-top: 20px;
-      padding-top: 10px;
-      font-size: 0.8rem;
-      color: var(--color-subtle);
+      margin-top: 20px; padding-top: 10px;
+      font-size: 0.8rem; color: var(--color-subtle);
     }
 
-    /* ── FOOTER ──────────────────────────────────────────────────── */
-    footer,
-    #footer {
+    footer, #footer {
       border-top: 1px solid var(--color-border);
-      padding: 16px;
-      font-size: 0.75rem;
-      color: var(--color-subtle);
-      text-align: center;
+      padding: 16px; font-size: 0.75rem;
+      color: var(--color-subtle); text-align: center;
       background: var(--color-surface-1);
     }
+    footer a { color: var(--color-link); }
 
-    footer a {
-      color: var(--color-link);
-    }
-
-    /* ── LOADING SKELETON ────────────────────────────────────────── */
+    /* LOADING */
     #loading-screen {
-      position: fixed;
-      inset: 0;
-      background: #fff;
-      z-index: 200;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      transition: opacity 0.3s;
+      position: fixed; inset: 0; background: #fff; z-index: 200;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 16px; transition: opacity 0.3s;
     }
-
     .wiki-spinner {
-      width: 40px;
-      height: 40px;
+      width: 40px; height: 40px;
       border: 3px solid var(--color-surface-2);
       border-top-color: var(--color-link);
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
     }
-
     @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: 0.85rem; color: var(--color-subtle); }
 
-    .loading-text {
-      font-size: 0.85rem;
-      color: var(--color-subtle);
-    }
-
-    /* ── RESPONSIVE: tabletas ────────────────────────────────────── */
     @media (min-width: 640px) {
-      #content, .mw-body {
-        padding: 20px 24px 60px;
-      }
-
-      h1.firstHeading {
-        font-size: 2rem;
-      }
-    }
-
-    /* ── SCROLL-INDICATOR invisible (debug) ─────────────────────── */
-    #tracker-debug {
-      display: none; /* SIEMPRE oculto en producción */
+      #content, .mw-body { padding: 20px 24px 60px; }
+      h1.firstHeading    { font-size: 2rem; }
     }
   </style>
 </head>
-
 <body>
 
-<!-- ════════════════════════════════════════════════════════════════
-     PANTALLA DE CARGA
-     Se muestra mientras se hace fetch a la API de Wikipedia
-     ════════════════════════════════════════════════════════════════ -->
+<!-- LOADING -->
 <div id="loading-screen">
   <img src="https://en.wikipedia.org/static/images/mobile/copyright/wikipedia-wordmark-en.svg"
        alt="Wikipedia" style="width:180px; opacity:0.5" />
@@ -430,37 +248,36 @@
   <p class="loading-text">Cargando artículo…</p>
 </div>
 
-<!-- ════════════════════════════════════════════════════════════════
-     HEADER: Réplica exacta de la barra superior de Wikipedia Móvil
-     ════════════════════════════════════════════════════════════════ -->
+<!-- HEADER -->
 <div class="header-container">
   <div class="header-inner">
 
-    <!-- Botón hamburguesa -->
     <button class="menu-btn" aria-label="Menú principal">
-      <span></span>
-      <span></span>
-      <span></span>
+      <span></span><span></span><span></span>
     </button>
 
-    <!-- Logo SVG de Wikipedia (la W del puzzle) -->
     <img class="wiki-logo"
          src="https://en.wikipedia.org/static/images/mobile/copyright/wikipedia.png"
          alt="Wikipedia" />
 
-    <!-- Barra de búsqueda (decorativa, no funcional) -->
-    <div class="search-bar">
-      <!-- Ícono lupa SVG -->
-      <svg viewBox="0 0 20 20" aria-hidden="true">
+    <div class="search-bar" id="search-container">
+      <svg viewBox="0 0 20 20" aria-hidden="true" width="16" height="16">
         <path d="M7.5 13c-3.04 0-5.5-2.46-5.5-5.5S4.46 2 7.5 2 13 4.46 13 7.5
                  c0 1.33-.47 2.55-1.25 3.5l4.38 4.37-1.06 1.06L10.99
                  12.14A5.47 5.47 0 017.5 13zm0-10C5.01 3 3 5.01 3 7.5S5.01
                  12 7.5 12 12 9.99 12 7.5 9.99 3 7.5 3z"/>
       </svg>
-      <span id="search-placeholder">Buscar en Wikipedia</span>
+      <input
+        type="text"
+        id="search-input"
+        placeholder="Buscar en Wikipedia"
+        autocomplete="off"
+        autocorrect="off"
+        spellcheck="false"
+      />
+      <button id="search-clear" aria-label="Limpiar">✕</button>
     </div>
 
-    <!-- Botón usuario -->
     <button class="user-btn" aria-label="Iniciar sesión">
       <svg viewBox="0 0 20 20" aria-hidden="true">
         <path d="M10 11c-2.67 0-8 1.34-8 4v1h16v-1c0-2.66-5.33-4-8-4zm0-1a4
@@ -471,31 +288,23 @@
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════════════════════════
-     CUERPO DEL ARTÍCULO
-     ════════════════════════════════════════════════════════════════ -->
+<!-- Dropdown sugerencias -->
+<div id="search-suggestions"></div>
+
+<!-- CONTENIDO -->
 <div id="content" class="mw-body" role="main">
-
-  <!-- Título del artículo (se rellena dinámicamente) -->
   <h1 class="firstHeading" id="firstHeading"></h1>
-
-  <!-- Contenido parseado de la API de Wikipedia -->
   <div class="mw-parser-output" id="mw-content-text"></div>
-
-  <!-- Categorías (opcionales, se generan dinámicamente) -->
   <div id="catlinks"></div>
 </div>
 
-<!-- ════════════════════════════════════════════════════════════════
-     FOOTER: Réplica del pie de Wikipedia
-     ════════════════════════════════════════════════════════════════ -->
+<!-- FOOTER -->
 <footer id="footer">
   <p>
     Este texto está disponible bajo la
     <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.es" target="_blank">
       Licencia Creative Commons Atribución-CompartirIgual 4.0
-    </a>;
-    pueden aplicarse términos adicionales.
+    </a>; pueden aplicarse términos adicionales.
   </p>
   <p style="margin-top:8px">
     Wikipedia® es una marca registrada de la
@@ -503,365 +312,217 @@
   </p>
 </footer>
 
-<!-- ════════════════════════════════════════════════════════════════
-     LIBRERÍA SOCKET.IO (CDN - se conecta al servidor del mago)
-     ════════════════════════════════════════════════════════════════ -->
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-
-<!-- ════════════════════════════════════════════════════════════════
-     SCRIPT PRINCIPAL - TODA LA LÓGICA EN UN SOLO BLOQUE
-     ════════════════════════════════════════════════════════════════ -->
 <script>
 'use strict';
 
-/* ================================================================
-   ██████  CONFIG - CAMBIA ESTOS VALORES ANTES DE DESPLEGAR
-   ================================================================ */
+/* ── CONFIG ─────────────────────────────────────────────────── */
 const CONFIG = {
-  // URL de tu servidor Node.js en Render/Railway/VPS
-  // Ejemplo: 'https://wikiserver.tudominio.com'
-  SERVER_URL: 'https://scaling-telegram-77rrqgggp6w2pqxw-3000.app.github.dev',
-
-  // Sala de Socket.io — debe coincidir con el nombre en la app iOS
-  SOCKET_ROOM: 'mago-sala',
-
-  // Idioma de Wikipedia (es = español, en = inglés)
-  WIKI_LANG: 'es',
-
-  // Parámetro GET para el artículo (?article=JavaScript)
-  URL_PARAM: 'article',
-
-  // Artículo por defecto si no hay parámetro
-  DEFAULT_ARTICLE: 'JavaScript',
-
-  // Milisegundos de debounce para selección de texto
+  SERVER_URL:         'https://scaling-telegram-77rrqgggp6w2pqxw-3000.app.github.dev',
+  SOCKET_ROOM:        'mago-sala',
+  WIKI_LANG:          'es',
+  URL_PARAM:          'article',
+  DEFAULT_ARTICLE:    'JavaScript',
   SELECTION_DEBOUNCE: 400,
 };
 
-/* ================================================================
-   PASO 0: OCULTAMIENTO DE BARRA URL (Técnica estándar en móvil)
-   window.scrollTo(0,1) fuerza al navegador móvil a colapsar la
-   barra de direcciones justo al cargar la página.
-   ================================================================ */
-window.addEventListener('load', () => {
-  // Micro-delay de 50ms para asegurar que el DOM ya existe
-  setTimeout(() => {
-    window.scrollTo(0, 1);
-  }, 50);
-});
+/* ── OCULTAR BARRA URL ──────────────────────────────────────── */
+window.addEventListener('load', () => setTimeout(() => window.scrollTo(0, 1), 50));
 
-/* ================================================================
-   PASO 1: LEER PARÁMETRO DE URL
-   URL de ejemplo: https://tudominio.com/?article=Inteligencia_artificial
-   ================================================================ */
-function getArticleFromURL() {
-  const params = new URLSearchParams(window.location.search);
-  return params.get(CONFIG.URL_PARAM) || CONFIG.DEFAULT_ARTICLE;
-}
-
-const ARTICLE_NAME = getArticleFromURL();
-
-// Actualiza el título del tab del navegador
+/* ── ARTÍCULO DE LA URL ─────────────────────────────────────── */
+const ARTICLE_NAME = new URLSearchParams(window.location.search).get(CONFIG.URL_PARAM) || CONFIG.DEFAULT_ARTICLE;
 document.title = `${ARTICLE_NAME.replace(/_/g, ' ')} - Wikipedia`;
 
-/* ================================================================
-   PASO 2: CONEXIÓN WEBSOCKET AL SERVIDOR DEL MAGO
-   Conecta siempre al inicio, antes de fetch, para que no haya
-   latencia en el primer evento.
-   ================================================================ */
-let socket = null;
-let isConnected = false;
+/* ── WEBSOCKET ──────────────────────────────────────────────── */
+let socket = null, isConnected = false;
 
 function initSocket() {
   socket = io(CONFIG.SERVER_URL, {
-    transports: ['websocket', 'polling'],  // WebSocket primero, polling como fallback
-    reconnection: true,
-    reconnectionAttempts: Infinity,
-    reconnectionDelay: 1000,
-    reconnectionDelayMax: 5000,
-    timeout: 10000,
+    transports: ['websocket', 'polling'],
+    reconnection: true, reconnectionAttempts: Infinity,
+    reconnectionDelay: 1000, reconnectionDelayMax: 5000, timeout: 10000,
   });
-
-  // Evento: conexión establecida
   socket.on('connect', () => {
     isConnected = true;
-    console.log('[WS] Conectado al servidor. Socket ID:', socket.id);
-
-    // Unirse a la sala del mago
     socket.emit('join-room', CONFIG.SOCKET_ROOM);
-
-    // Emitir inmediatamente el artículo que se está leyendo
-    emitEvent('article-loaded', {
-      article: ARTICLE_NAME.replace(/_/g, ' '),
-      url: window.location.href,
-      timestamp: Date.now(),
-    });
+    emitEvent('article-loaded', { article: ARTICLE_NAME.replace(/_/g, ' '), url: window.location.href, timestamp: Date.now() });
   });
-
-  // Evento: desconexión
-  socket.on('disconnect', (reason) => {
-    isConnected = false;
-    console.warn('[WS] Desconectado:', reason);
-  });
-
-  // Evento: error de conexión
-  socket.on('connect_error', (error) => {
-    console.error('[WS] Error de conexión:', error.message);
-  });
+  socket.on('disconnect', () => { isConnected = false; });
 }
 
-/* ================================================================
-   FUNCIÓN HELPER: Emitir evento al servidor con protección
-   ================================================================ */
-function emitEvent(eventName, data) {
-  if (socket && isConnected) {
-    socket.emit(eventName, {
-      room: CONFIG.SOCKET_ROOM,
-      ...data,
-    });
-  }
-  // Si no está conectado, los eventos se descartan silenciosamente
+function emitEvent(name, data) {
+  if (socket && isConnected) socket.emit(name, { room: CONFIG.SOCKET_ROOM, ...data });
 }
 
-/* ================================================================
-   PASO 3: FETCH REAL A LA API DE WIKIPEDIA
-   Endpoint: action=parse&prop=text&page=ARTICULO
-   Devuelve el HTML completo del artículo ya renderizado por MediaWiki.
-   ================================================================ */
+/* ── FETCH WIKIPEDIA ────────────────────────────────────────── */
 async function fetchWikipediaArticle(articleName) {
-  const lang     = CONFIG.WIKI_LANG;
-  const apiBase  = `https://${lang}.wikipedia.org/w/api.php`;
-
   const params = new URLSearchParams({
-    action:       'parse',
-    page:         articleName,
-    prop:         'text|displaytitle|categories',
-    format:       'json',
-    origin:       '*',               // CORS: necesario para fetch desde el cliente
-    redirects:    '1',               // Sigue redirecciones automáticamente
-    mobileformat: '1',               // Devuelve formato optimizado para móvil
-    noimages:     '0',
+    action: 'parse', page: articleName,
+    prop: 'text|displaytitle|categories',
+    format: 'json', origin: '*', redirects: '1', mobileformat: '1',
   });
-
-  const response = await fetch(`${apiBase}?${params.toString()}`);
-
-  if (!response.ok) {
-    throw new Error(`Wikipedia API HTTP error: ${response.status}`);
-  }
-
-  const data = await response.json();
-
-  if (data.error) {
-    throw new Error(`Wikipedia API error: ${data.error.info}`);
-  }
-
+  const res  = await fetch(`https://${CONFIG.WIKI_LANG}.wikipedia.org/w/api.php?${params}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.info);
   return data.parse;
 }
 
-/* ================================================================
-   PASO 4: RENDERIZAR EL ARTÍCULO EN EL DOM
-   Toma el HTML de Wikipedia y lo inyecta en la plantilla local,
-   luego corrige los links para que no salgan de la página.
-   ================================================================ */
+/* ── RENDERIZAR ─────────────────────────────────────────────── */
 function renderArticle(parseData) {
-  const titleEl   = document.getElementById('firstHeading');
+  document.getElementById('firstHeading').innerHTML = parseData.displaytitle || ARTICLE_NAME.replace(/_/g, ' ');
   const contentEl = document.getElementById('mw-content-text');
-
-  // Título
-  const displayTitle = parseData.displaytitle || ARTICLE_NAME.replace(/_/g, ' ');
-  titleEl.innerHTML  = displayTitle;
-
-  // Contenido HTML del artículo
   contentEl.innerHTML = parseData.text['*'];
 
-  // ── Post-procesado de links ─────────────────────────────────
-  // Todos los links internos /wiki/XYZ se convierten en
-  // ?article=XYZ para que permanezcan en nuestra página clon.
-  const allLinks = contentEl.querySelectorAll('a[href]');
-  allLinks.forEach(link => {
+  const excluded = ['File:','Archivo:','Special:','Especial:','Help:','Ayuda:',
+    'Wikipedia:','Categoría:','Portal:','Plantilla:','Usuario:','Discusión:','MediaWiki:','Módulo:'];
+
+  contentEl.querySelectorAll('a[href]').forEach(link => {
     const href = link.getAttribute('href');
-
-    if (href && href.startsWith('/wiki/')) {
-      // Extraer nombre de artículo
-      const wikiArticle = href.replace('/wiki/', '');
-
-      // Excluir links de archivos, especiales, etc.
-      if (!wikiArticle.startsWith('File:') &&
-          !wikiArticle.startsWith('Archivo:') &&
-          !wikiArticle.startsWith('Special:') &&
-          !wikiArticle.startsWith('Especial:') &&
-          !wikiArticle.startsWith('Help:') &&
-          !wikiArticle.startsWith('Ayuda:') &&
-          !wikiArticle.startsWith('Wikipedia:') &&
-          !wikiArticle.startsWith('Categoría:') &&
-          !wikiArticle.startsWith('Portal:') &&
-          !wikiArticle.startsWith('Plantilla:') &&
-          !wikiArticle.startsWith('Usuario:') &&
-          !wikiArticle.startsWith('Usuario_discusión:') &&
-          !wikiArticle.startsWith('Usuario_discusión:')) {
-
-        // Redirigir al mismo dominio con el nuevo artículo
-        link.href = `?article=${wikiArticle}`;
-
-        // Registrar click en este link
-        link.addEventListener('click', (e) => {
-          const targetArticle = wikiArticle.replace(/_/g, ' ');
-          emitEvent('link-clicked', {
-            linkText:      link.textContent.trim(),
-            targetArticle: targetArticle,
-            timestamp:     Date.now(),
-          });
-          // NO prevenimos el default: el click navega normalmente
-        });
-
-      } else {
-        // Links externos van a Wikipedia real
-        link.href = `https://${CONFIG.WIKI_LANG}.wikipedia.org${href}`;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-      }
+    if (!href?.startsWith('/wiki/')) return;
+    const art = href.replace('/wiki/', '');
+    if (excluded.some(p => art.startsWith(p))) {
+      link.href = `https://${CONFIG.WIKI_LANG}.wikipedia.org${href}`;
+      link.target = '_blank'; link.rel = 'noopener noreferrer';
+    } else {
+      link.href = `?article=${art}`;
+      link.addEventListener('click', () => emitEvent('link-clicked', {
+        linkText: link.textContent.trim(), targetArticle: art.replace(/_/g,' '), timestamp: Date.now()
+      }));
     }
   });
 
-  // ── Corregir rutas de imágenes ──────────────────────────────
-  // Las imágenes locales apuntan a //upload.wikimedia.org, lo cual
-  // funciona directamente en el navegador (protocolo-relativo).
-  // Las imágenes con src relativo necesitan ser absolutas.
-  const allImgs = contentEl.querySelectorAll('img[src]');
-  allImgs.forEach(img => {
-    const src = img.getAttribute('src');
-    if (src && src.startsWith('//')) {
-      img.src = 'https:' + src;
-    } else if (src && src.startsWith('/')) {
-      img.src = `https://${CONFIG.WIKI_LANG}.wikipedia.org${src}`;
-    }
+  contentEl.querySelectorAll('img[src]').forEach(img => {
+    const s = img.getAttribute('src');
+    if (s?.startsWith('//'))      img.src = 'https:' + s;
+    else if (s?.startsWith('/'))  img.src = `https://${CONFIG.WIKI_LANG}.wikipedia.org${s}`;
   });
 
-  // ── Categorías ──────────────────────────────────────────────
-  if (parseData.categories && parseData.categories.length > 0) {
-    const catEl = document.getElementById('catlinks');
-    const cats  = parseData.categories
-      .map(c => `<a href="?article=Categoría:${c['*']}">${c['*'].replace(/_/g, ' ')}</a>`)
-      .join(' • ');
-    catEl.innerHTML = `<strong>Categorías:</strong> ${cats}`;
+  if (parseData.categories?.length > 0) {
+    const cats = parseData.categories.map(c =>
+      `<a href="?article=Categoría:${c['*']}">${c['*'].replace(/_/g,' ')}</a>`).join(' • ');
+    document.getElementById('catlinks').innerHTML = `<strong>Categorías:</strong> ${cats}`;
   }
 }
 
-/* ================================================================
-   PASO 5: KEYLOGGER / CLICK-LOGGER - SCRIPT INVISIBLE DE RASTREO
-   Detecta selección de texto y clicks en links.
-   Todo se emite via WebSocket al servidor.
-   ================================================================ */
+/* ── TRACKER ────────────────────────────────────────────────── */
 function initTracker() {
-
-  let selectionTimer = null;
-
-  // ── Rastreo de texto seleccionado ──────────────────────────
-  // El evento 'selectionchange' se dispara en tiempo real mientras
-  // el usuario selecciona texto con el dedo.
-  document.addEventListener('selectionchange', () => {
-    clearTimeout(selectionTimer);
-
-    selectionTimer = setTimeout(() => {
-      const selection = window.getSelection();
-      if (!selection || selection.isCollapsed) return;
-
-      const selectedText = selection.toString().trim();
-
-      // Filtrar: mínimo 2 caracteres, máximo 200
-      if (selectedText.length < 2 || selectedText.length > 200) return;
-
-      // Emitir la palabra/frase seleccionada
-      emitEvent('text-selected', {
-        selectedText: selectedText,
-        article:      ARTICLE_NAME.replace(/_/g, ' '),
-        timestamp:    Date.now(),
-      });
-
-      console.log('[TRACKER] Texto seleccionado:', selectedText);
-
-    }, CONFIG.SELECTION_DEBOUNCE);
-  });
-
-  // ── Rastreo táctil (touchend) como respaldo en móvil ───────
-  // En algunos navegadores móviles, 'selectionchange' puede ser
-  // inconsistente. 'touchend' actúa como respaldo.
-  document.addEventListener('touchend', () => {
-    setTimeout(() => {
-      const selection = window.getSelection();
-      if (!selection || selection.isCollapsed) return;
-
-      const selectedText = selection.toString().trim();
-      if (selectedText.length < 2) return;
-
-      emitEvent('text-selected', {
-        selectedText: selectedText,
-        article:      ARTICLE_NAME.replace(/_/g, ' '),
-        trigger:      'touchend',
-        timestamp:    Date.now(),
-      });
-    }, 100);
-  });
-
-  // ── Rastreo de tiempo en página ─────────────────────────────
-  // Emite un heartbeat cada 30 segundos para saber si el
-  // espectador sigue leyendo el artículo.
-  setInterval(() => {
-    emitEvent('heartbeat', {
-      article:   ARTICLE_NAME.replace(/_/g, ' '),
-      scrollY:   window.scrollY,
-      timestamp: Date.now(),
-    });
-  }, 30000);
+  let t = null;
+  const emit = (trigger) => {
+    const sel  = window.getSelection();
+    if (!sel || sel.isCollapsed) return;
+    const text = sel.toString().trim();
+    if (text.length < 2 || text.length > 200) return;
+    emitEvent('text-selected', { selectedText: text, article: ARTICLE_NAME.replace(/_/g,' '), trigger, timestamp: Date.now() });
+  };
+  document.addEventListener('selectionchange', () => { clearTimeout(t); t = setTimeout(() => emit('selectionchange'), CONFIG.SELECTION_DEBOUNCE); });
+  document.addEventListener('touchend', () => setTimeout(() => emit('touchend'), 100));
+  setInterval(() => emitEvent('heartbeat', { article: ARTICLE_NAME.replace(/_/g,' '), scrollY: window.scrollY, timestamp: Date.now() }), 30000);
 }
 
-/* ================================================================
-   PASO 6: OCULTAR PANTALLA DE CARGA
-   ================================================================ */
+/* ── BÚSQUEDA FUNCIONAL ─────────────────────────────────────── */
+const searchInput       = document.getElementById('search-input');
+const searchSuggestions = document.getElementById('search-suggestions');
+const searchClear       = document.getElementById('search-clear');
+let searchTimer = null, activeIndex = -1;
+
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.trim();
+  searchClear.style.display = q.length ? 'block' : 'none';
+  activeIndex = -1;
+  clearTimeout(searchTimer);
+  if (q.length < 2) { closeSuggestions(); return; }
+  searchTimer = setTimeout(() => fetchSuggestions(q), 300);
+});
+
+searchClear.addEventListener('click', () => {
+  searchInput.value = ''; searchClear.style.display = 'none';
+  closeSuggestions(); searchInput.focus();
+});
+
+searchInput.addEventListener('keydown', (e) => {
+  const items = searchSuggestions.querySelectorAll('.suggestion-item');
+  if (e.key === 'ArrowDown')  { e.preventDefault(); activeIndex = Math.min(activeIndex+1, items.length-1); updateActive(items); }
+  else if (e.key === 'ArrowUp')  { e.preventDefault(); activeIndex = Math.max(activeIndex-1, -1); updateActive(items); }
+  else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (activeIndex >= 0 && items[activeIndex]) items[activeIndex].click();
+    else if (searchInput.value.trim()) navigateToArticle(searchInput.value.trim());
+  }
+  else if (e.key === 'Escape') { closeSuggestions(); searchInput.blur(); }
+});
+
+function updateActive(items) {
+  items.forEach((el, i) => el.classList.toggle('active', i === activeIndex));
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#search-container') && !e.target.closest('#search-suggestions'))
+    closeSuggestions();
+});
+
+function closeSuggestions() {
+  searchSuggestions.style.display = 'none';
+  searchSuggestions.innerHTML = '';
+  activeIndex = -1;
+}
+
+async function fetchSuggestions(query) {
+  try {
+    const params = new URLSearchParams({ action:'opensearch', search:query, limit:'8', format:'json', origin:'*' });
+    const data   = await (await fetch(`https://${CONFIG.WIKI_LANG}.wikipedia.org/w/api.php?${params}`)).json();
+    renderSuggestions(data[1] || [], data[2] || []);
+  } catch(e) { console.error(e); }
+}
+
+function renderSuggestions(titles, descs) {
+  if (!titles.length) { closeSuggestions(); return; }
+  searchSuggestions.innerHTML = titles.map((t, i) => `
+    <div class="suggestion-item" onclick="navigateToArticle('${t.replace(/'/g,"\\'")}')">
+      <svg width="14" height="14" viewBox="0 0 20 20" aria-hidden="true">
+        <path d="M7.5 13c-3.04 0-5.5-2.46-5.5-5.5S4.46 2 7.5 2 13 4.46 13 7.5
+                 c0 1.33-.47 2.55-1.25 3.5l4.38 4.37-1.06 1.06L10.99
+                 12.14A5.47 5.47 0 017.5 13zm0-10C5.01 3 3 5.01 3 7.5S5.01
+                 12 7.5 12 12 9.99 12 7.5 9.99 3 7.5 3z"/>
+      </svg>
+      <div>
+        <div class="suggestion-title">${t}</div>
+        ${descs[i] ? `<div class="suggestion-desc">${descs[i]}</div>` : ''}
+      </div>
+    </div>`).join('');
+  searchSuggestions.style.display = 'block';
+}
+
+function navigateToArticle(title) {
+  closeSuggestions();
+  searchInput.value = ''; searchClear.style.display = 'none';
+  window.location.href = `?article=${encodeURIComponent(title)}`;
+}
+
+/* ── LOADING ────────────────────────────────────────────────── */
 function hideLoadingScreen() {
-  const loader = document.getElementById('loading-screen');
-  loader.style.opacity = '0';
-  setTimeout(() => {
-    loader.style.display = 'none';
-  }, 300);
+  const el = document.getElementById('loading-screen');
+  el.style.opacity = '0';
+  setTimeout(() => el.style.display = 'none', 300);
 }
 
-/* ================================================================
-   BOOTSTRAP: Orden de arranque
-   ================================================================ */
+/* ── BOOTSTRAP ──────────────────────────────────────────────── */
 (async function bootstrap() {
   try {
-    // 1. Conectar WebSocket primero (sin bloquear)
     initSocket();
-
-    // 2. Fetch del artículo a Wikipedia
     const parseData = await fetchWikipediaArticle(ARTICLE_NAME);
-
-    // 3. Renderizar en el DOM
     renderArticle(parseData);
-
-    // 4. Iniciar rastreo invisible
     initTracker();
-
-    // 5. Ocultar pantalla de carga
     hideLoadingScreen();
-
-    // 6. Scroll automático para ocultar barra URL
     setTimeout(() => window.scrollTo(0, 1), 100);
-
-  } catch (error) {
-    console.error('[BOOTSTRAP] Error al cargar artículo:', error);
-
-    // Si falla la API, mostrar mensaje de error al estilo Wikipedia
+  } catch (err) {
+    console.error('[BOOTSTRAP]', err);
     document.getElementById('firstHeading').textContent = 'Error al cargar';
-    document.getElementById('mw-content-text').innerHTML = `
-      <p>No se pudo cargar el artículo "<strong>${ARTICLE_NAME}</strong>".</p>
-      <p>Verifica que el nombre del artículo sea correcto o intenta de nuevo.</p>
-    `;
+    document.getElementById('mw-content-text').innerHTML =
+      `<p>No se pudo cargar "<strong>${ARTICLE_NAME}</strong>". Verifica el nombre e inténtalo de nuevo.</p>`;
     hideLoadingScreen();
   }
 })();
-
 </script>
 </body>
 </html>

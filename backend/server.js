@@ -17,26 +17,62 @@ const io = new Server(server, {
   transports: ['websocket', 'polling'],
 });
 
-// Estado por sesión: { [sessionCode]: { article, selectedText, lastLink, updatedAt } }
+// Estado por sesión
 const sessions = {};
+
+// Sesiones activas (códigos que tienen app iOS conectada)
+const activeSessions = new Set();
 
 app.get('/health', (req, res) => res.status(200).json({ status: 'ok', uptime: process.uptime() }));
 app.get('/', (req, res) => res.send('WikiMentalism Server OK'));
 
+// Endpoint para verificar si una sesión está activa
+app.get('/session/:code', (req, res) => {
+  const code = req.params.code;
+  res.json({ active: activeSessions.has(code) });
+});
+
 io.on('connection', (socket) => {
   console.log('Cliente conectado:', socket.id);
+  let joinedRoom = null;
+  let isHost     = false; // true = app iOS, false = frontend
 
-  // Unirse a una sala con código de sesión único
-  socket.on('join-room', (sessionCode) => {
+  // Unirse a sala como HOST (app iOS del mago)
+  socket.on('join-room-host', (sessionCode) => {
     socket.join(sessionCode);
-    console.log(`Socket ${socket.id} entró a sala: ${sessionCode}`);
+    joinedRoom = sessionCode;
+    isHost     = true;
+    activeSessions.add(sessionCode);
+    console.log(`[HOST] Sala activa: ${sessionCode}`);
 
-    // Si hay estado previo, enviarlo al nuevo cliente
-    if (sessions[sessionCode]) {
-      socket.emit('state-sync', { lastState: sessions[sessionCode] });
-    } else {
+    if (!sessions[sessionCode]) {
       sessions[sessionCode] = { article: null, selectedText: null, lastLink: null };
     }
+
+    // Notificar al frontend si ya estaba esperando
+    io.to(sessionCode).emit('session-activated', { active: true });
+  });
+
+  // Unirse a sala como ESPECTADOR (frontend web)
+  socket.on('join-room', (sessionCode) => {
+    socket.join(sessionCode);
+    joinedRoom = sessionCode;
+    isHost     = false;
+
+    // Verificar si la sesión está activa (el mago está conectado)
+    const isActive = activeSessions.has(sessionCode);
+    socket.emit('session-status', { active: isActive });
+
+    if (isActive && sessions[sessionCode]) {
+      socket.emit('state-sync', { lastState: sessions[sessionCode] });
+    }
+
+    console.log(`[ESPECTADOR] Sala: ${sessionCode} — Activa: ${isActive}`);
+  });
+
+  // Verificar estado de sesión
+  socket.on('check-session', (sessionCode) => {
+    socket.emit('session-status', { active: activeSessions.has(sessionCode) });
   });
 
   socket.on('article-loaded', (data) => {
@@ -75,6 +111,12 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
+    // Si era el host, marcar sesión como inactiva
+    if (isHost && joinedRoom) {
+      activeSessions.delete(joinedRoom);
+      io.to(joinedRoom).emit('session-status', { active: false });
+      console.log(`[HOST] Desconectado — Sala inactiva: ${joinedRoom}`);
+    }
     console.log('Cliente desconectado:', socket.id);
   });
 });

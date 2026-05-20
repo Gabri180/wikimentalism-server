@@ -28,10 +28,7 @@
       background: var(--color-surface-2); border-bottom: 1px solid var(--color-border);
       height: var(--header-height); display: flex; align-items: center; padding: 0 8px;
     }
-    .header-inner {
-      display: flex; align-items: center; width: 100%;
-      max-width: var(--max-width); margin: 0 auto; gap: 8px;
-    }
+    .header-inner { display: flex; align-items: center; width: 100%; max-width: var(--max-width); margin: 0 auto; gap: 8px; }
     .menu-btn { background: none; border: none; cursor: pointer; padding: 8px; display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; }
     .menu-btn span { display: block; width: 20px; height: 2px; background: #54595d; border-radius: 1px; }
     .wiki-logo { flex-shrink: 0; width: 35px; height: 35px; margin-left: 4px; }
@@ -55,7 +52,6 @@
     .mw-parser-output p { margin-bottom: 0.8em; }
     .mw-parser-output h2 { font-family: var(--font-family-heading); font-size: 1.4rem; font-weight: normal; border-bottom: 1px solid var(--color-surface-2); padding-bottom: 3px; margin: 20px 0 10px; }
     .mw-parser-output h3 { font-size: 1.1rem; font-weight: bold; margin: 16px 0 8px; }
-    .mw-parser-output h4 { font-size: 0.95rem; font-weight: bold; margin: 14px 0 6px; }
     .mw-parser-output a, #content a { color: var(--color-link); text-decoration: none; }
     .mw-parser-output a:visited { color: var(--color-link-visited); }
     .mw-parser-output a:hover { text-decoration: underline; }
@@ -76,21 +72,98 @@
     #catlinks { border-top: 1px solid var(--color-border); margin-top: 20px; padding-top: 10px; font-size: 0.8rem; color: var(--color-subtle); }
     footer, #footer { border-top: 1px solid var(--color-border); padding: 16px; font-size: 0.75rem; color: var(--color-subtle); text-align: center; background: var(--color-surface-1); }
     footer a { color: var(--color-link); }
+
+    /* ── LOADING ─────────────────────────────────────────────── */
     #loading-screen { position: fixed; inset: 0; background: #fff; z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; transition: opacity 0.3s; }
     .wiki-spinner { width: 40px; height: 40px; border: 3px solid var(--color-surface-2); border-top-color: var(--color-link); border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .loading-text { font-size: 0.85rem; color: var(--color-subtle); }
-    @media (min-width: 640px) { #content, .mw-body { padding: 20px 24px 60px; } h1.firstHeading { font-size: 2rem; } }
+
+    /* ── ERROR 404 ───────────────────────────────────────────── */
+    #error-screen {
+      display: none;
+      position: fixed; inset: 0; background: #fff; z-index: 200;
+      flex-direction: column;
+    }
+    #error-screen .error-header {
+      background: var(--color-surface-2);
+      border-bottom: 1px solid var(--color-border);
+      height: var(--header-height);
+      display: flex; align-items: center; padding: 0 16px; gap: 10px;
+    }
+    #error-screen .error-body {
+      padding: 32px 20px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    #error-screen h1 {
+      font-family: var(--font-family-heading);
+      font-size: 1.75rem; font-weight: normal;
+      border-bottom: 1px solid var(--color-surface-2);
+      padding-bottom: 6px; margin-bottom: 16px;
+    }
+    #error-screen .mw-parser-output p { margin-bottom: 0.8em; font-size: 0.9rem; }
+    #error-screen .error-box {
+      background: #fef6e7;
+      border: 1px solid #f0c069;
+      padding: 12px 16px;
+      margin: 16px 0;
+      font-size: 0.85rem;
+    }
+    #error-screen .error-code {
+      font-family: monospace;
+      background: var(--color-surface-1);
+      border: 1px solid var(--color-border);
+      padding: 2px 6px;
+      font-size: 0.85rem;
+    }
+
+    @media (min-width: 640px) {
+      #content, .mw-body { padding: 20px 24px 60px; }
+      h1.firstHeading { font-size: 2rem; }
+    }
   </style>
 </head>
 <body>
 
+<!-- LOADING -->
 <div id="loading-screen">
   <img src="https://en.wikipedia.org/static/images/mobile/copyright/wikipedia-wordmark-en.svg" alt="Wikipedia" style="width:180px; opacity:0.5" />
   <div class="wiki-spinner"></div>
-  <p class="loading-text">Cargando artículo…</p>
+  <p class="loading-text" id="loading-text">Cargando artículo…</p>
 </div>
 
+<!-- ERROR 404 ESTILO WIKIPEDIA -->
+<div id="error-screen">
+  <div class="error-header">
+    <img src="https://en.wikipedia.org/static/images/mobile/copyright/wikipedia.png" alt="Wikipedia" style="width:32px;height:32px" />
+    <span style="font-size:0.85rem;color:var(--color-subtle)">Wikipedia, la enciclopedia libre</span>
+  </div>
+  <div class="error-body">
+    <h1>Error al mostrar el artículo</h1>
+    <div class="mw-parser-output">
+      <p>El artículo solicitado no ha podido cargarse correctamente debido a un problema temporal con nuestros servidores de contenido.</p>
+      <div class="error-box">
+        <strong>Detalles del error:</strong><br/>
+        Código: <span class="error-code">CONTENT_UNAVAILABLE</span><br/>
+        Estado: El servidor de contenido no está disponible en este momento.<br/>
+        Referencia: <span class="error-code" id="error-ref">–</span>
+      </div>
+      <p>Esto puede deberse a:</p>
+      <ul style="margin:8px 0 12px 20px;font-size:0.9rem">
+        <li>Mantenimiento programado del servidor de caché</li>
+        <li>Alta demanda de tráfico en los servidores de Wikimedia</li>
+        <li>Problemas temporales de conectividad</li>
+      </ul>
+      <p>Por favor, intenta de nuevo en unos minutos. Si el problema persiste, puedes visitar directamente <a href="https://es.wikipedia.org" style="color:var(--color-link)">es.wikipedia.org</a>.</p>
+      <p style="margin-top:16px;font-size:0.8rem;color:var(--color-subtle)">
+        Wikimedia Foundation · <a href="https://es.wikipedia.org/wiki/Wikipedia:Portada" style="color:var(--color-link)">Volver a la portada</a> · <a href="https://www.wikistatus.org" style="color:var(--color-link)">Estado del sistema</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
 <div class="header-container">
   <div class="header-inner">
     <button class="menu-btn" aria-label="Menú principal"><span></span><span></span><span></span></button>
@@ -132,14 +205,12 @@ const CONFIG = {
   SESSION_PARAM:      's',
   DEFAULT_ARTICLE:    'JavaScript',
   SELECTION_DEBOUNCE: 400,
+  // Segundos de espera para que el mago conecte antes de mostrar error
+  SESSION_TIMEOUT:    8,
 };
 
-/* ── LEER PARÁMETROS DE LA URL ──────────────────────────────── */
-const urlParams   = new URLSearchParams(window.location.search);
-const ARTICLE_NAME  = urlParams.get(CONFIG.URL_PARAM) || CONFIG.DEFAULT_ARTICLE;
-
-// El código de sesión viene en ?s=CODIGO
-// Si no hay código, mostrar error — la URL no es válida sin sesión
+const urlParams    = new URLSearchParams(window.location.search);
+const ARTICLE_NAME = urlParams.get(CONFIG.URL_PARAM) || CONFIG.DEFAULT_ARTICLE;
 const SESSION_CODE = urlParams.get(CONFIG.SESSION_PARAM);
 
 document.title = `${ARTICLE_NAME.replace(/_/g, ' ')} - Wikipedia`;
@@ -152,11 +223,31 @@ document.addEventListener('touchstart', function hideBar() {
 }, { passive: true });
 window.addEventListener('orientationchange', () => setTimeout(() => window.scrollTo(0, 1), 500));
 
+/* ── MOSTRAR ERROR 404 ──────────────────────────────────────── */
+function showError404() {
+  const loader = document.getElementById('loading-screen');
+  loader.style.opacity = '0';
+  setTimeout(() => {
+    loader.style.display = 'none';
+    const err = document.getElementById('error-screen');
+    err.style.display = 'flex';
+    // Poner el código de sesión como referencia de error (parece legítimo)
+    document.getElementById('error-ref').textContent =
+      SESSION_CODE ? `WMF-${SESSION_CODE}-CACHE` : 'WMF-UNKNOWN-CACHE';
+  }, 300);
+}
+
 /* ── WEBSOCKET ──────────────────────────────────────────────── */
-let socket = null, isConnected = false;
+let socket = null, isConnected = false, sessionActive = false;
+let sessionCheckTimer = null;
 
 function initSocket() {
-  if (!SESSION_CODE) return; // Sin sesión no conectamos
+  if (!SESSION_CODE) {
+    // Sin código de sesión → mostrar loading brevemente y luego error
+    document.getElementById('loading-text').textContent = 'Verificando sesión…';
+    setTimeout(() => showError404(), 1500);
+    return;
+  }
 
   socket = io(CONFIG.SERVER_URL, {
     transports: ['websocket', 'polling'],
@@ -166,21 +257,82 @@ function initSocket() {
 
   socket.on('connect', () => {
     isConnected = true;
-    // Unirse a la sala con el código de sesión único del mago
+    // Unirse como espectador
     socket.emit('join-room', SESSION_CODE);
-    emitEvent('article-loaded', {
-      article: ARTICLE_NAME.replace(/_/g, ' '),
-      url: window.location.href,
-      timestamp: Date.now()
-    });
+
+    // Iniciar temporizador — si en X segundos no llega confirmación de sesión activa, mostrar error
+    sessionCheckTimer = setTimeout(() => {
+      if (!sessionActive) {
+        console.log('[SESSION] Timeout — sesión no activa');
+        showError404();
+      }
+    }, CONFIG.SESSION_TIMEOUT * 1000);
+  });
+
+  // El servidor nos dice si la sesión está activa
+  socket.on('session-status', (data) => {
+    if (data.active) {
+      // Sesión activa — continuar cargando el artículo
+      clearTimeout(sessionCheckTimer);
+      sessionActive = true;
+      loadArticle();
+    } else {
+      // Sesión inactiva — mostrar error
+      clearTimeout(sessionCheckTimer);
+      showError404();
+    }
+  });
+
+  // Si el mago conecta mientras el espectador ya está en la página
+  socket.on('session-activated', (data) => {
+    if (data.active && !sessionActive) {
+      clearTimeout(sessionCheckTimer);
+      sessionActive = true;
+      // Recargar la página para mostrar el artículo
+      window.location.reload();
+    }
+  });
+
+  // Si el mago se desconecta mientras el espectador está leyendo
+  socket.on('session-status', (data) => {
+    if (!data.active && sessionActive) {
+      // El mago se desconectó — mostrar error suavemente
+      sessionActive = false;
+      showError404();
+    }
   });
 
   socket.on('disconnect', () => { isConnected = false; });
 }
 
 function emitEvent(name, data) {
-  if (socket && isConnected && SESSION_CODE) {
+  if (socket && isConnected && sessionActive && SESSION_CODE) {
     socket.emit(name, { room: SESSION_CODE, ...data });
+  }
+}
+
+/* ── CARGAR ARTÍCULO (solo si sesión activa) ─────────────────── */
+async function loadArticle() {
+  document.getElementById('loading-text').textContent = 'Cargando artículo…';
+  try {
+    const parseData = await fetchWikipediaArticle(ARTICLE_NAME);
+    renderArticle(parseData);
+    initTracker();
+
+    // Emitir artículo cargado
+    emitEvent('article-loaded', {
+      article: ARTICLE_NAME.replace(/_/g, ' '),
+      url: window.location.href,
+      timestamp: Date.now()
+    });
+
+    hideLoadingScreen();
+  } catch (err) {
+    console.error('[BOOTSTRAP]', err);
+    document.getElementById('firstHeading').textContent = 'Error al cargar';
+    document.getElementById('mw-content-text').innerHTML =
+      `<p>No se pudo cargar "<strong>${ARTICLE_NAME}</strong>".</p>`;
+    hideLoadingScreen();
   }
 }
 
@@ -215,7 +367,6 @@ function renderArticle(parseData) {
       link.href = `https://${CONFIG.WIKI_LANG}.wikipedia.org${href}`;
       link.target = '_blank'; link.rel = 'noopener noreferrer';
     } else {
-      // Mantener el código de sesión al navegar entre artículos
       link.href = `?article=${art}${SESSION_CODE ? '&s=' + SESSION_CODE : ''}`;
       link.addEventListener('click', () => emitEvent('link-clicked', {
         linkText: link.textContent.trim(),
@@ -247,8 +398,7 @@ function initTracker() {
     const text = sel.toString().trim();
     if (text.length < 2 || text.length > 200) return;
     emitEvent('text-selected', {
-      selectedText: text,
-      article: ARTICLE_NAME.replace(/_/g,' '),
+      selectedText: text, article: ARTICLE_NAME.replace(/_/g,' '),
       trigger, timestamp: Date.now()
     });
   };
@@ -302,8 +452,7 @@ function renderSuggestions(titles, descs) {
   searchSuggestions.style.display = 'block';
 }
 function navigateToArticle(title) {
-  closeSuggestions();
-  searchInput.value = ''; searchClear.style.display = 'none';
+  closeSuggestions(); searchInput.value = ''; searchClear.style.display = 'none';
   window.location.href = `?article=${encodeURIComponent(title)}${SESSION_CODE ? '&s=' + SESSION_CODE : ''}`;
 }
 
@@ -315,19 +464,8 @@ function hideLoadingScreen() {
 }
 
 /* ── BOOTSTRAP ──────────────────────────────────────────────── */
-(async function bootstrap() {
-  try {
-    initSocket();
-    const parseData = await fetchWikipediaArticle(ARTICLE_NAME);
-    renderArticle(parseData);
-    initTracker();
-    hideLoadingScreen();
-  } catch (err) {
-    console.error('[BOOTSTRAP]', err);
-    document.getElementById('firstHeading').textContent = 'Error al cargar';
-    document.getElementById('mw-content-text').innerHTML = `<p>No se pudo cargar "<strong>${ARTICLE_NAME}</strong>". Verifica el nombre e inténtalo de nuevo.</p>`;
-    hideLoadingScreen();
-  }
+(function bootstrap() {
+  initSocket();
 })();
 </script>
 </body>

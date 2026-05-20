@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta name="theme-color" content="#eaecf0" />
+  <link rel="shortcut icon" href="https://en.wikipedia.org/static/favicon/wikipedia.ico" />
+  <title>Wikipedia</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --color-base: #202122; --color-subtle: #54595d;
+      --color-link: #3366cc; --color-link-visited: #6b4516;
+      --color-surface-0: #fff; --color-surface-1: #f8f9fa;
+      --color-surface-2: #eaecf0; --color-border: #a2a9b1;
+      --font-family-heading: 'Linux Libertine', Georgia, Times, serif;
+      --header-height: 54px; --max-width: 1000px;
+    }
+    html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Lato, Helvetica, Arial, sans-serif;
+      font-size: 0.875rem; line-height: 1.6;
+      color: var(--color-base); background: var(--color-surface-0);
+      overflow-x: hidden; min-height: 101vh;
+    }
+    .header-container {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: var(--color-surface-2); border-bottom: 1px solid var(--color-border);
+      height: var(--header-height); display: flex; align-items: center; padding: 0 8px;
+    }
+    .header-inner {
+      display: flex; align-items: center; width: 100%;
+      max-width: var(--max-width); margin: 0 auto; gap: 8px;
+    }
+    .menu-btn { background: none; border: none; cursor: pointer; padding: 8px; display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; }
+    .menu-btn span { display: block; width: 20px; height: 2px; background: #54595d; border-radius: 1px; }
+    .wiki-logo { flex-shrink: 0; width: 35px; height: 35px; margin-left: 4px; }
+    .search-bar { flex: 1; display: flex; align-items: center; background: var(--color-surface-0); border: 1px solid var(--color-border); border-radius: 2px; padding: 6px 10px; min-width: 0; position: relative; }
+    .search-bar svg { width: 16px; height: 16px; fill: var(--color-subtle); flex-shrink: 0; margin-right: 8px; }
+    #search-input { border: none; outline: none; width: 100%; font-size: 0.875rem; color: var(--color-base); background: transparent; font-family: inherit; }
+    #search-input::placeholder { color: var(--color-subtle); }
+    #search-clear { display: none; background: none; border: none; cursor: pointer; padding: 2px; color: var(--color-subtle); font-size: 16px; line-height: 1; flex-shrink: 0; }
+    #search-suggestions { display: none; position: fixed; top: var(--header-height); left: 0; right: 0; background: white; border-bottom: 1px solid var(--color-border); z-index: 999; max-height: 60vh; overflow-y: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .suggestion-item { padding: 10px 16px; cursor: pointer; font-size: 0.875rem; color: var(--color-base); border-bottom: 1px solid var(--color-surface-2); display: flex; align-items: flex-start; gap: 10px; }
+    .suggestion-item:last-child { border-bottom: none; }
+    .suggestion-item:hover, .suggestion-item.active { background: #eaf3fe; }
+    .suggestion-item svg { margin-top: 2px; flex-shrink: 0; fill: var(--color-subtle); }
+    .suggestion-title { font-weight: 500; color: var(--color-link); line-height: 1.4; }
+    .suggestion-desc { font-size: 0.75rem; color: var(--color-subtle); margin-top: 1px; line-height: 1.3; }
+    .user-btn { background: none; border: none; cursor: pointer; padding: 8px; flex-shrink: 0; }
+    .user-btn svg { width: 20px; height: 20px; fill: var(--color-subtle); }
+    #content, .mw-body { margin-top: var(--header-height); padding: 16px 16px 40px; max-width: var(--max-width); margin-left: auto; margin-right: auto; }
+    h1.firstHeading, #firstHeading { font-family: var(--font-family-heading); font-size: 1.75rem; font-weight: normal; line-height: 1.25; color: var(--color-base); border-bottom: 1px solid var(--color-surface-2); padding-bottom: 4px; margin-bottom: 16px; }
+    .mw-parser-output { font-size: 0.9rem; line-height: 1.65; }
+    .mw-parser-output p { margin-bottom: 0.8em; }
+    .mw-parser-output h2 { font-family: var(--font-family-heading); font-size: 1.4rem; font-weight: normal; border-bottom: 1px solid var(--color-surface-2); padding-bottom: 3px; margin: 20px 0 10px; }
+    .mw-parser-output h3 { font-size: 1.1rem; font-weight: bold; margin: 16px 0 8px; }
+    .mw-parser-output h4 { font-size: 0.95rem; font-weight: bold; margin: 14px 0 6px; }
+    .mw-parser-output a, #content a { color: var(--color-link); text-decoration: none; }
+    .mw-parser-output a:visited { color: var(--color-link-visited); }
+    .mw-parser-output a:hover { text-decoration: underline; }
+    .mw-parser-output img { max-width: 100%; height: auto; }
+    .mw-parser-output .thumb { margin: 0 0 12px 16px; float: right; clear: right; background: var(--color-surface-1); border: 1px solid var(--color-border); padding: 4px; max-width: 45%; }
+    .mw-parser-output .thumbinner { font-size: 0.75rem; line-height: 1.4; }
+    .mw-parser-output .thumbcaption { padding: 3px 4px 0; color: var(--color-subtle); }
+    .mw-parser-output .infobox, .mw-parser-output table.infobox { float: right; clear: right; margin: 0 0 16px 16px; padding: 6px; border: 1px solid var(--color-border); background: var(--color-surface-1); font-size: 0.8rem; line-height: 1.5; max-width: 55%; }
+    .mw-parser-output .infobox th { background: var(--color-surface-2); text-align: center; padding: 4px; }
+    .mw-parser-output .infobox td { padding: 3px 4px; vertical-align: top; }
+    .mw-parser-output .toc, #toc { background: var(--color-surface-1); border: 1px solid var(--color-border); padding: 12px 16px; margin: 0 0 20px; font-size: 0.85rem; display: inline-block; min-width: 200px; }
+    .mw-parser-output .toctitle { font-weight: bold; margin-bottom: 6px; }
+    .mw-parser-output .toc ul { list-style: none; margin: 0; padding: 0; }
+    .mw-parser-output .toc li { padding: 2px 0; }
+    .mw-parser-output .reflist, .mw-parser-output ol.references { font-size: 0.8rem; }
+    .mw-parser-output sup { font-size: 0.7rem; }
+    .mw-parser-output sup a { color: var(--color-link); }
+    #catlinks { border-top: 1px solid var(--color-border); margin-top: 20px; padding-top: 10px; font-size: 0.8rem; color: var(--color-subtle); }
+    footer, #footer { border-top: 1px solid var(--color-border); padding: 16px; font-size: 0.75rem; color: var(--color-subtle); text-align: center; background: var(--color-surface-1); }
+    footer a { color: var(--color-link); }
+    #loading-screen { position: fixed; inset: 0; background: #fff; z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; transition: opacity 0.3s; }
+    .wiki-spinner { width: 40px; height: 40px; border: 3px solid var(--color-surface-2); border-top-color: var(--color-link); border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { font-size: 0.85rem; color: var(--color-subtle); }
+    @media (min-width: 640px) { #content, .mw-body { padding: 20px 24px 60px; } h1.firstHeading { font-size: 2rem; } }
+  </style>
+</head>
+<body>
+
+<div id="loading-screen">
+  <img src="https://en.wikipedia.org/static/images/mobile/copyright/wikipedia-wordmark-en.svg" alt="Wikipedia" style="width:180px; opacity:0.5" />
+  <div class="wiki-spinner"></div>
+  <p class="loading-text">Cargando artículo…</p>
+</div>
+
+<div class="header-container">
+  <div class="header-inner">
+    <button class="menu-btn" aria-label="Menú principal"><span></span><span></span><span></span></button>
+    <img class="wiki-logo" src="https://en.wikipedia.org/static/images/mobile/copyright/wikipedia.png" alt="Wikipedia" />
+    <div class="search-bar" id="search-container">
+      <svg viewBox="0 0 20 20" aria-hidden="true" width="16" height="16">
+        <path d="M7.5 13c-3.04 0-5.5-2.46-5.5-5.5S4.46 2 7.5 2 13 4.46 13 7.5c0 1.33-.47 2.55-1.25 3.5l4.38 4.37-1.06 1.06L10.99 12.14A5.47 5.47 0 017.5 13zm0-10C5.01 3 3 5.01 3 7.5S5.01 12 7.5 12 12 9.99 12 7.5 9.99 3 7.5 3z"/>
+      </svg>
+      <input type="text" id="search-input" placeholder="Buscar en Wikipedia" autocomplete="off" autocorrect="off" spellcheck="false" />
+      <button id="search-clear" aria-label="Limpiar">✕</button>
+    </div>
+    <button class="user-btn" aria-label="Iniciar sesión">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 11c-2.67 0-8 1.34-8 4v1h16v-1c0-2.66-5.33-4-8-4zm0-1a4 4 0 100-8 4 4 0 000 8z"/></svg>
+    </button>
+  </div>
+</div>
+
+<div id="search-suggestions"></div>
+
+<div id="content" class="mw-body" role="main">
+  <h1 class="firstHeading" id="firstHeading"></h1>
+  <div class="mw-parser-output" id="mw-content-text"></div>
+  <div id="catlinks"></div>
+</div>
+
+<footer id="footer">
+  <p>Este texto está disponible bajo la <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.es" target="_blank">Licencia Creative Commons Atribución-CompartirIgual 4.0</a>; pueden aplicarse términos adicionales.</p>
+  <p style="margin-top:8px">Wikipedia® es una marca registrada de la <a href="https://www.wikimediafoundation.org" target="_blank">Fundación Wikimedia</a>.</p>
+</footer>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+'use strict';
+
+const CONFIG = {
+  SERVER_URL:         'https://enciclopedia-url.site',
+  WIKI_LANG:          'es',
+  URL_PARAM:          'article',
+  SESSION_PARAM:      's',
+  DEFAULT_ARTICLE:    'JavaScript',
+  SELECTION_DEBOUNCE: 400,
+};
+
+/* ── LEER PARÁMETROS DE LA URL ──────────────────────────────── */
+const urlParams   = new URLSearchParams(window.location.search);
+const ARTICLE_NAME  = urlParams.get(CONFIG.URL_PARAM) || CONFIG.DEFAULT_ARTICLE;
+
+// El código de sesión viene en ?s=CODIGO
+// Si no hay código, mostrar error — la URL no es válida sin sesión
+const SESSION_CODE = urlParams.get(CONFIG.SESSION_PARAM);
+
+document.title = `${ARTICLE_NAME.replace(/_/g, ' ')} - Wikipedia`;
+
+/* ── OCULTAR BARRA URL ──────────────────────────────────────── */
+window.addEventListener('load', () => setTimeout(() => window.scrollTo(0, 1), 300));
+document.addEventListener('touchstart', function hideBar() {
+  window.scrollTo(0, 1);
+  document.removeEventListener('touchstart', hideBar);
+}, { passive: true });
+window.addEventListener('orientationchange', () => setTimeout(() => window.scrollTo(0, 1), 500));
+
+/* ── WEBSOCKET ──────────────────────────────────────────────── */
+let socket = null, isConnected = false;
+
+function initSocket() {
+  if (!SESSION_CODE) return; // Sin sesión no conectamos
+
+  socket = io(CONFIG.SERVER_URL, {
+    transports: ['websocket', 'polling'],
+    reconnection: true, reconnectionAttempts: Infinity,
+    reconnectionDelay: 1000, reconnectionDelayMax: 5000, timeout: 10000,
+  });
+
+  socket.on('connect', () => {
+    isConnected = true;
+    // Unirse a la sala con el código de sesión único del mago
+    socket.emit('join-room', SESSION_CODE);
+    emitEvent('article-loaded', {
+      article: ARTICLE_NAME.replace(/_/g, ' '),
+      url: window.location.href,
+      timestamp: Date.now()
+    });
+  });
+
+  socket.on('disconnect', () => { isConnected = false; });
+}
+
+function emitEvent(name, data) {
+  if (socket && isConnected && SESSION_CODE) {
+    socket.emit(name, { room: SESSION_CODE, ...data });
+  }
+}
+
+/* ── FETCH WIKIPEDIA ────────────────────────────────────────── */
+async function fetchWikipediaArticle(articleName) {
+  const params = new URLSearchParams({
+    action: 'parse', page: articleName,
+    prop: 'text|displaytitle|categories',
+    format: 'json', origin: '*', redirects: '1', mobileformat: '1',
+  });
+  const res  = await fetch(`https://${CONFIG.WIKI_LANG}.wikipedia.org/w/api.php?${params}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.info);
+  return data.parse;
+}
+
+/* ── RENDERIZAR ─────────────────────────────────────────────── */
+function renderArticle(parseData) {
+  document.getElementById('firstHeading').innerHTML = parseData.displaytitle || ARTICLE_NAME.replace(/_/g, ' ');
+  const contentEl = document.getElementById('mw-content-text');
+  contentEl.innerHTML = parseData.text['*'];
+
+  const excluded = ['File:','Archivo:','Special:','Especial:','Help:','Ayuda:',
+    'Wikipedia:','Categoría:','Portal:','Plantilla:','Usuario:','Discusión:','MediaWiki:','Módulo:'];
+
+  contentEl.querySelectorAll('a[href]').forEach(link => {
+    const href = link.getAttribute('href');
+    if (!href?.startsWith('/wiki/')) return;
+    const art = href.replace('/wiki/', '');
+    if (excluded.some(p => art.startsWith(p))) {
+      link.href = `https://${CONFIG.WIKI_LANG}.wikipedia.org${href}`;
+      link.target = '_blank'; link.rel = 'noopener noreferrer';
+    } else {
+      // Mantener el código de sesión al navegar entre artículos
+      link.href = `?article=${art}${SESSION_CODE ? '&s=' + SESSION_CODE : ''}`;
+      link.addEventListener('click', () => emitEvent('link-clicked', {
+        linkText: link.textContent.trim(),
+        targetArticle: art.replace(/_/g,' '),
+        timestamp: Date.now()
+      }));
+    }
+  });
+
+  contentEl.querySelectorAll('img[src]').forEach(img => {
+    const s = img.getAttribute('src');
+    if (s?.startsWith('//'))      img.src = 'https:' + s;
+    else if (s?.startsWith('/'))  img.src = `https://${CONFIG.WIKI_LANG}.wikipedia.org${s}`;
+  });
+
+  if (parseData.categories?.length > 0) {
+    const cats = parseData.categories.map(c =>
+      `<a href="?article=Categoría:${c['*']}${SESSION_CODE ? '&s=' + SESSION_CODE : ''}">${c['*'].replace(/_/g,' ')}</a>`).join(' • ');
+    document.getElementById('catlinks').innerHTML = `<strong>Categorías:</strong> ${cats}`;
+  }
+}
+
+/* ── TRACKER ────────────────────────────────────────────────── */
+function initTracker() {
+  let t = null;
+  const emit = (trigger) => {
+    const sel  = window.getSelection();
+    if (!sel || sel.isCollapsed) return;
+    const text = sel.toString().trim();
+    if (text.length < 2 || text.length > 200) return;
+    emitEvent('text-selected', {
+      selectedText: text,
+      article: ARTICLE_NAME.replace(/_/g,' '),
+      trigger, timestamp: Date.now()
+    });
+  };
+  document.addEventListener('selectionchange', () => { clearTimeout(t); t = setTimeout(() => emit('selectionchange'), CONFIG.SELECTION_DEBOUNCE); });
+  document.addEventListener('touchend', () => setTimeout(() => emit('touchend'), 100));
+  setInterval(() => emitEvent('heartbeat', { article: ARTICLE_NAME.replace(/_/g,' '), scrollY: window.scrollY, timestamp: Date.now() }), 30000);
+}
+
+/* ── BÚSQUEDA ───────────────────────────────────────────────── */
+const searchInput       = document.getElementById('search-input');
+const searchSuggestions = document.getElementById('search-suggestions');
+const searchClear       = document.getElementById('search-clear');
+let searchTimer = null, activeIndex = -1;
+
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.trim();
+  searchClear.style.display = q.length ? 'block' : 'none';
+  activeIndex = -1;
+  clearTimeout(searchTimer);
+  if (q.length < 2) { closeSuggestions(); return; }
+  searchTimer = setTimeout(() => fetchSuggestions(q), 300);
+});
+searchClear.addEventListener('click', () => { searchInput.value = ''; searchClear.style.display = 'none'; closeSuggestions(); searchInput.focus(); });
+searchInput.addEventListener('keydown', (e) => {
+  const items = searchSuggestions.querySelectorAll('.suggestion-item');
+  if (e.key === 'ArrowDown')  { e.preventDefault(); activeIndex = Math.min(activeIndex+1, items.length-1); updateActive(items); }
+  else if (e.key === 'ArrowUp')   { e.preventDefault(); activeIndex = Math.max(activeIndex-1, -1); updateActive(items); }
+  else if (e.key === 'Enter') { e.preventDefault(); if (activeIndex >= 0 && items[activeIndex]) items[activeIndex].click(); else if (searchInput.value.trim()) navigateToArticle(searchInput.value.trim()); }
+  else if (e.key === 'Escape') { closeSuggestions(); searchInput.blur(); }
+});
+function updateActive(items) { items.forEach((el, i) => el.classList.toggle('active', i === activeIndex)); }
+document.addEventListener('click', (e) => { if (!e.target.closest('#search-container') && !e.target.closest('#search-suggestions')) closeSuggestions(); });
+function closeSuggestions() { searchSuggestions.style.display = 'none'; searchSuggestions.innerHTML = ''; activeIndex = -1; }
+async function fetchSuggestions(query) {
+  try {
+    const params = new URLSearchParams({ action:'opensearch', search:query, limit:'8', format:'json', origin:'*' });
+    const data   = await (await fetch(`https://${CONFIG.WIKI_LANG}.wikipedia.org/w/api.php?${params}`)).json();
+    renderSuggestions(data[1] || [], data[2] || []);
+  } catch(e) { console.error(e); }
+}
+function renderSuggestions(titles, descs) {
+  if (!titles.length) { closeSuggestions(); return; }
+  searchSuggestions.innerHTML = titles.map((t, i) => `
+    <div class="suggestion-item" onclick="navigateToArticle('${t.replace(/'/g,"\\'")}')">
+      <svg width="14" height="14" viewBox="0 0 20 20" aria-hidden="true"><path d="M7.5 13c-3.04 0-5.5-2.46-5.5-5.5S4.46 2 7.5 2 13 4.46 13 7.5c0 1.33-.47 2.55-1.25 3.5l4.38 4.37-1.06 1.06L10.99 12.14A5.47 5.47 0 017.5 13zm0-10C5.01 3 3 5.01 3 7.5S5.01 12 7.5 12 12 9.99 12 7.5 9.99 3 7.5 3z"/></svg>
+      <div>
+        <div class="suggestion-title">${t}</div>
+        ${descs[i] ? `<div class="suggestion-desc">${descs[i]}</div>` : ''}
+      </div>
+    </div>`).join('');
+  searchSuggestions.style.display = 'block';
+}
+function navigateToArticle(title) {
+  closeSuggestions();
+  searchInput.value = ''; searchClear.style.display = 'none';
+  window.location.href = `?article=${encodeURIComponent(title)}${SESSION_CODE ? '&s=' + SESSION_CODE : ''}`;
+}
+
+/* ── LOADING ────────────────────────────────────────────────── */
+function hideLoadingScreen() {
+  const el = document.getElementById('loading-screen');
+  el.style.opacity = '0';
+  setTimeout(() => { el.style.display = 'none'; setTimeout(() => window.scrollTo(0, 1), 100); }, 300);
+}
+
+/* ── BOOTSTRAP ──────────────────────────────────────────────── */
+(async function bootstrap() {
+  try {
+    initSocket();
+    const parseData = await fetchWikipediaArticle(ARTICLE_NAME);
+    renderArticle(parseData);
+    initTracker();
+    hideLoadingScreen();
+  } catch (err) {
+    console.error('[BOOTSTRAP]', err);
+    document.getElementById('firstHeading').textContent = 'Error al cargar';
+    document.getElementById('mw-content-text').innerHTML = `<p>No se pudo cargar "<strong>${ARTICLE_NAME}</strong>". Verifica el nombre e inténtalo de nuevo.</p>`;
+    hideLoadingScreen();
+  }
+})();
+</script>
+</body>
+</html>

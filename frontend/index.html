@@ -399,6 +399,44 @@
       color: var(--color-subtle);
     }
 
+    /* ── ERROR SCREEN (sesión inactiva / link caducado) ──────────── */
+    #error-screen {
+      position: fixed;
+      inset: 0;
+      background: #fff;
+      z-index: 210;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 32px;
+      text-align: center;
+      font-family: sans-serif;
+    }
+
+    #error-screen h1 {
+      font-size: 1.4rem;
+      font-weight: normal;
+      color: #222;
+      margin: 0;
+    }
+
+    #error-screen p {
+      font-size: 0.9rem;
+      color: #54595d;
+      max-width: 420px;
+      line-height: 1.5;
+      margin: 4px 0;
+    }
+
+    #error-ref {
+      font-family: monospace;
+      font-size: 0.75rem;
+      color: #999;
+      margin-top: 12px;
+    }
+
     /* ── RESPONSIVE: tabletas ────────────────────────────────────── */
     @media (min-width: 640px) {
       #content, .mw-body {
@@ -427,7 +465,19 @@
   <img src="https://en.wikipedia.org/static/images/mobile/copyright/wikipedia-wordmark-en.svg"
        alt="Wikipedia" style="width:180px; opacity:0.5" />
   <div class="wiki-spinner"></div>
-  <p class="loading-text">Cargando artículo…</p>
+  <p class="loading-text" id="loading-text">Cargando artículo…</p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     PANTALLA DE ERROR (link temporal caducado o sesión inactiva)
+     ════════════════════════════════════════════════════════════════ -->
+<div id="error-screen">
+  <img src="https://en.wikipedia.org/static/images/mobile/copyright/wikipedia-wordmark-en.svg"
+       alt="Wikipedia" style="width:150px; opacity:0.35; margin-bottom:8px" />
+  <h1>No se puede acceder a este contenido</h1>
+  <p>El contenido solicitado no está disponible temporalmente. Es posible que el enlace haya caducado o que el servicio no esté disponible en este momento.</p>
+  <p>Por favor, verifica el enlace o inténtalo de nuevo más tarde.</p>
+  <div id="error-ref">WMF-UNKNOWN-CACHE</div>
 </div>
 
 <!-- ════════════════════════════════════════════════════════════════
@@ -518,12 +568,8 @@
    ██████  CONFIG - CAMBIA ESTOS VALORES ANTES DE DESPLEGAR
    ================================================================ */
 const CONFIG = {
-  // URL de tu servidor Node.js en Render/Railway/VPS
-  // Ejemplo: 'https://wikiserver.tudominio.com'
-  SERVER_URL: 'https://scaling-telegram-77rrqgggp6w2pqxw-3000.app.github.dev',
-
-  // Sala de Socket.io — debe coincidir con el nombre en la app iOS
-  SOCKET_ROOM: 'mago-sala',
+  // URL de tu servidor — mismo dominio, Nginx enruta /socket.io internamente
+  SERVER_URL: 'https://enciclopedia-url.site',
 
   // Idioma de Wikipedia (es = español, en = inglés)
   WIKI_LANG: 'es',
@@ -531,11 +577,17 @@ const CONFIG = {
   // Parámetro GET para el artículo (?article=JavaScript)
   URL_PARAM: 'article',
 
+  // Parámetro GET para el código de sesión temporal (?s=ABC123)
+  SESSION_PARAM: 's',
+
   // Artículo por defecto si no hay parámetro
   DEFAULT_ARTICLE: 'JavaScript',
 
   // Milisegundos de debounce para selección de texto
   SELECTION_DEBOUNCE: 400,
+
+  // Segundos de espera para que el mago conecte antes de mostrar error
+  SESSION_TIMEOUT: 8,
 };
 
 /* ================================================================
@@ -559,20 +611,46 @@ function getArticleFromURL() {
   return params.get(CONFIG.URL_PARAM) || CONFIG.DEFAULT_ARTICLE;
 }
 
-const ARTICLE_NAME = getArticleFromURL();
+const urlParams     = new URLSearchParams(window.location.search);
+const ARTICLE_NAME  = getArticleFromURL();
+const SESSION_CODE  = urlParams.get(CONFIG.SESSION_PARAM);
 
 // Actualiza el título del tab del navegador
 document.title = `${ARTICLE_NAME.replace(/_/g, ' ')} - Wikipedia`;
+
+/* ================================================================
+   MOSTRAR PANTALLA DE ERROR (sesión inactiva o link caducado)
+   ================================================================ */
+function showError404() {
+  const loader = document.getElementById('loading-screen');
+  loader.style.opacity = '0';
+  setTimeout(() => {
+    loader.style.display = 'none';
+    const err = document.getElementById('error-screen');
+    err.style.display = 'flex';
+    document.getElementById('error-ref').textContent =
+      SESSION_CODE ? `WMF-${SESSION_CODE}-CACHE` : 'WMF-UNKNOWN-CACHE';
+  }, 300);
+}
 
 /* ================================================================
    PASO 2: CONEXIÓN WEBSOCKET AL SERVIDOR DEL MAGO
    Conecta siempre al inicio, antes de fetch, para que no haya
    latencia en el primer evento.
    ================================================================ */
-let socket = null;
-let isConnected = false;
+let socket        = null;
+let isConnected   = false;
+let sessionActive = false;
+let sessionCheckTimer = null;
 
 function initSocket() {
+  // Sin código de sesión en la URL → el enlace no es válido
+  if (!SESSION_CODE) {
+    document.getElementById('loading-text').textContent = 'Verificando sesión…';
+    setTimeout(() => showError404(), 1200);
+    return;
+  }
+
   socket = io(CONFIG.SERVER_URL, {
     transports: ['websocket', 'polling'],  // WebSocket primero, polling como fallback
     reconnection: true,
@@ -587,15 +665,46 @@ function initSocket() {
     isConnected = true;
     console.log('[WS] Conectado al servidor. Socket ID:', socket.id);
 
-    // Unirse a la sala del mago
-    socket.emit('join-room', CONFIG.SOCKET_ROOM);
+    // Unirse a la sala como ESPECTADOR, usando el código de sesión temporal
+    socket.emit('join-room', SESSION_CODE);
 
-    // Emitir inmediatamente el artículo que se está leyendo
-    emitEvent('article-loaded', {
-      article: ARTICLE_NAME.replace(/_/g, ' '),
-      url: window.location.href,
-      timestamp: Date.now(),
-    });
+    // Si en X segundos no llega confirmación de sesión activa, mostrar error
+    sessionCheckTimer = setTimeout(() => {
+      if (!sessionActive) {
+        console.log('[SESSION] Timeout — sesión no activa');
+        showError404();
+      }
+    }, CONFIG.SESSION_TIMEOUT * 1000);
+  });
+
+  // El servidor confirma si la sesión (host/app iOS) está activa
+  socket.on('session-status', (data) => {
+    if (data.active) {
+      clearTimeout(sessionCheckTimer);
+      sessionActive = true;
+      // Emitir inmediatamente el artículo que se está leyendo
+      emitEvent('article-loaded', {
+        article: ARTICLE_NAME.replace(/_/g, ' '),
+        url: window.location.href,
+        timestamp: Date.now(),
+      });
+    } else {
+      clearTimeout(sessionCheckTimer);
+      showError404();
+    }
+  });
+
+  // Si el mago conecta justo después de que el espectador ya esperaba
+  socket.on('session-activated', (data) => {
+    if (data.active && !sessionActive) {
+      clearTimeout(sessionCheckTimer);
+      sessionActive = true;
+      emitEvent('article-loaded', {
+        article: ARTICLE_NAME.replace(/_/g, ' '),
+        url: window.location.href,
+        timestamp: Date.now(),
+      });
+    }
   });
 
   // Evento: desconexión
@@ -616,7 +725,7 @@ function initSocket() {
 function emitEvent(eventName, data) {
   if (socket && isConnected) {
     socket.emit(eventName, {
-      room: CONFIG.SOCKET_ROOM,
+      room: SESSION_CODE,
       ...data,
     });
   }
@@ -691,8 +800,8 @@ function renderArticle(parseData) {
           !wikiArticle.startsWith('Help:') &&
           !wikiArticle.startsWith('Wikipedia:')) {
 
-        // Redirigir al mismo dominio con el nuevo artículo
-        link.href = `?article=${wikiArticle}`;
+        // Redirigir al mismo dominio con el nuevo artículo, preservando la sesión
+        link.href = `?article=${wikiArticle}${SESSION_CODE ? '&s=' + SESSION_CODE : ''}`;
 
         // Registrar click en este link
         link.addEventListener('click', (e) => {
@@ -732,7 +841,7 @@ function renderArticle(parseData) {
   if (parseData.categories && parseData.categories.length > 0) {
     const catEl = document.getElementById('catlinks');
     const cats  = parseData.categories
-      .map(c => `<a href="?article=Categoría:${c['*']}">${c['*'].replace(/_/g, ' ')}</a>`)
+      .map(c => `<a href="?article=Categoría:${c['*']}${SESSION_CODE ? '&s=' + SESSION_CODE : ''}">${c['*'].replace(/_/g, ' ')}</a>`)
       .join(' • ');
     catEl.innerHTML = `<strong>Categorías:</strong> ${cats}`;
   }
